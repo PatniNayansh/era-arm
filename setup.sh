@@ -17,5 +17,16 @@ else
     echo "    WARNING: libsvtav1 missing — add ppa:ubuntuhandbook1/ffmpeg7 (see decisions.md)"
 fi
 
-# TODO (next step): uv install + pinned Python 3.12 + project dependencies
-echo "==> Done (system deps). uv/Python steps coming next."
+echo "==> Installing uv (pinned Python + dependency manager)"
+if ! command -v uv >/dev/null 2>&1; then
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    source "$HOME/.local/bin/env"
+else
+    echo "    OK: uv already installed"
+fi
+
+echo "==> Installing pinned Python 3.12 and syncing project dependencies"
+uv python install 3.12
+uv sync
+
+echo "==> Done. Run 'uv run <command>' to use the project's isolated environment."

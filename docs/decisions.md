@@ -25,3 +25,9 @@ GR00T-N1.5 primary for best documented results on cheap arms. Settled — not re
 
 ## uv for environment management
 Pins the project's own Python + dependencies, isolated from the system.
+
+## Flat package layout (era_arm/ at repo root, not src/era_arm/)
+`uv init --package` defaults to a src-layout. We want era_arm/ at the repo root so
+it visibly matches the six-layer architecture in the tree. Fixed by moving the
+package up and setting `module-root = ""` under `[tool.uv.build-backend]` in
+pyproject.toml so uv's build backend looks at the repo root instead of src/.

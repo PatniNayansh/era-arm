@@ -1,0 +1,19 @@
+[project]
+name = "era-arm"
+version = "0.1.0"
+description = "Add your description here"
+authors = [
+    { name = "kritin", email = "kritinkalani26@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = []
+
+[project.scripts]
+era-arm = "era_arm:main"
+
+[tool.uv.build-backend]
+module-root = ""
+
+[build-system]
+requires = ["uv_build>=0.11.26,<0.12.0"]
+build-backend = "uv_build"
