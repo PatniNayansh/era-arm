@@ -1,0 +1,39 @@
+# Python / uv
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Secrets / environment
+.env
+*.key
+*.pem
+
+# Datasets & recordings — kept out of git (cloud/disk only)
+datasets/**
+!datasets/.gitkeep
+!datasets/README.md
+*.mp4
+*.parquet
+
+# Model checkpoints / weights — large binaries, NEVER commit
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+checkpoints/
+outputs/
+
+# Experiment tracking
+wandb/
+
+# Firmware build artifacts
+firmware/**/.pio/
+firmware/**/build/
+*.elf
+*.hex
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
