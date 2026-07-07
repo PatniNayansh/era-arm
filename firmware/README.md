@@ -14,14 +14,17 @@ joints and talks to the Python driver layer (`era_arm/driver`) over USB serial.
 | J4 wrist roll | 1x hobby servo (35 kg*cm) | direct |
 | J5 gripper | 1x hobby servo (MG996R-class) | direct |
 
-Steppers J0-J3 each have an **AS5600 magnetic encoder** mounted on the joint's
-output shaft (post-gearbox) — this is the actual position source reported over
-serial, not step counting. Steppers are still *commanded* open-loop (step
+Every joint except the gripper (J0-J4: the 4 steppers plus the wrist-roll
+servo) has an **AS5600 magnetic encoder** mounted on its output shaft — this is
+the actual position source reported over serial, not step counting or the
+servo's last commanded angle. Steppers are still *commanded* open-loop (step
 pulses via AccelStepper); the encoder only reads back where the joint really
-is. The AS5600 has a fixed I2C address (0x36), so all 4 encoders share one I2C
-bus through a TCA9548A multiplexer, one mux channel per joint. Servos report
-their last *commanded* angle, not a measured one, since hobby servos expose no
-feedback pin.
+is. The wrist-roll servo has its own internal potentiometer, but it isn't
+exposed over the servo's control wire, so the external AS5600 is what actually
+gets reported for that joint too. The AS5600 has a fixed I2C address (0x36),
+so all 5 encoders share one I2C bus through a TCA9548A multiplexer, one mux
+channel per joint. The gripper (J5) has no encoder — its status is just its
+last commanded angle.
 
 ## Structure
 
@@ -35,7 +38,7 @@ feedback pin.
   gear ratio. Drives motion only — does not report position.
 - `include/as5600_encoder.h` / `src/as5600_encoder.cpp` — reads one AS5600
   encoder through its TCA9548A mux channel; this is the reported position for
-  each stepper joint.
+  every joint except the gripper.
 - `include/servo_joint.h` / `src/servo_joint.cpp` — wraps one
   [ESP32Servo](https://github.com/madhephaestus/ESP32Servo) instance.
 - `include/serial_protocol.h` / `src/serial_protocol.cpp` — parses incoming

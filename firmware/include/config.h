@@ -48,26 +48,31 @@ constexpr StepperJointConfig STEPPER_JOINTS[4] = {
     /* JOINT_WRIST_PITCH */ {7,  18, 27.0f,   60.0f, 90.0f},
 };
 
-// Position feedback: one AS5600 magnetic encoder per stepper joint, mounted
-// on the joint's output shaft (post-gearbox) — so encoder degrees are
+// Position feedback: one AS5600 magnetic encoder on every joint except the
+// gripper (J0-J4 — the 4 steppers plus the wrist-roll servo), mounted on each
+// joint's output shaft (post-gearbox for steppers) — so encoder degrees are
 // output-shaft degrees directly, no gear ratio math needed. The AS5600 has a
-// fixed I2C address (0x36), so all 4 share one bus through a TCA9548A
-// multiplexer, one mux channel per joint.
+// fixed I2C address (0x36), so all 5 share one bus through a TCA9548A
+// multiplexer, one mux channel per joint. The wrist-roll servo has its own
+// internal potentiometer, but it isn't exposed over the servo's control wire
+// — the external AS5600 is what actually gets reported for that joint.
 constexpr uint8_t I2C_SDA_PIN = 11;
 constexpr uint8_t I2C_SCL_PIN = 12;
 constexpr uint8_t TCA9548A_ADDR = 0x70;
 constexpr uint8_t AS5600_ADDR = 0x36;
+constexpr uint8_t NUM_ENCODERS = 5; // JOINT_BASE..JOINT_WRIST_ROLL; JOINT_GRIPPER has none
 
 struct EncoderConfig {
     uint8_t muxChannel;
     float zeroOffsetDeg; // raw AS5600 reading at the joint's defined zero position — calibrate later
 };
 
-constexpr EncoderConfig JOINT_ENCODERS[4] = {
+constexpr EncoderConfig JOINT_ENCODERS[NUM_ENCODERS] = {
     /* JOINT_BASE        */ {0, 0.0f},
     /* JOINT_SHOULDER    */ {1, 0.0f},
     /* JOINT_ELBOW       */ {2, 0.0f},
     /* JOINT_WRIST_PITCH */ {3, 0.0f},
+    /* JOINT_WRIST_ROLL  */ {4, 0.0f},
 };
 
 struct ServoJointConfig {

@@ -40,14 +40,20 @@ to unblock that. One-time fix; `pio` works normally after.
 
 ## Position feedback: AS5600 magnetic encoders, not step counting
 Corrected an earlier wrong assumption that the steppers were open-loop with no
-encoders. Each stepper joint (J0-J3) actually has an AS5600 magnetic encoder on
-its output shaft, and that's the reported position — not counted microsteps.
-Motion is still commanded open-loop (step pulses); the encoder only reads back
-actual position, it doesn't (yet) feed back into a PID correction loop. Revisit
-if slipped-step detection/correction becomes necessary.
+encoders. Every joint except the gripper (J0-J4: the 4 steppers plus the
+wrist-roll servo) actually has an AS5600 magnetic encoder on its output shaft,
+and that's the reported position — not counted microsteps, and not the servo's
+last-commanded angle. Motion is still commanded open-loop (step pulses for
+steppers, PWM for the wrist-roll servo); encoders only read back actual
+position, they don't (yet) feed back into a PID correction loop. Revisit if
+slipped-step detection/correction becomes necessary. Initially assumed only
+4 encoders (one per stepper); corrected again to 5 once the wrist-roll servo's
+encoder was confirmed too — the servo's own internal potentiometer isn't
+exposed over its control wire, so the external AS5600 is the only way to get
+real position feedback on that joint.
 
 ## AS5600 encoders share one I2C bus via a TCA9548A mux
-The AS5600 has a fixed I2C address (0x36), so 4 of them can't sit on one bus
+The AS5600 has a fixed I2C address (0x36), so 5 of them can't sit on one bus
 directly. Options considered: a mux chip (TCA9548A), bit-banged extra I2C buses
 per encoder, or swapping to the address-programmable AS5600L. Went with the mux
 — cheap, standard for this exact "N identical fixed-address I2C sensors" problem,

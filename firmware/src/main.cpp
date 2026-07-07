@@ -7,9 +7,9 @@
 #include "servo_joint.h"
 #include "stepper_joint.h"
 
-StepperJoint stepperJoints[4]; // JOINT_BASE..JOINT_WRIST_PITCH — open-loop actuation
-As5600Encoder encoders[4];     // JOINT_BASE..JOINT_WRIST_PITCH — actual position feedback
-ServoJoint servoJoints[2];     // JOINT_WRIST_ROLL, JOINT_GRIPPER
+StepperJoint stepperJoints[4];       // JOINT_BASE..JOINT_WRIST_PITCH — open-loop actuation
+As5600Encoder encoders[NUM_ENCODERS]; // JOINT_BASE..JOINT_WRIST_ROLL — actual position feedback
+ServoJoint servoJoints[2];           // JOINT_WRIST_ROLL, JOINT_GRIPPER
 SerialProtocol protocol;
 
 uint32_t lastCommandMillis = 0;
@@ -28,6 +28,8 @@ void setup() {
 
     for (uint8_t i = 0; i < 4; i++) {
         stepperJoints[i].begin(STEPPER_JOINTS[i]);
+    }
+    for (uint8_t i = 0; i < NUM_ENCODERS; i++) {
         encoders[i].begin(JOINT_ENCODERS[i].muxChannel, JOINT_ENCODERS[i].zeroOffsetDeg);
     }
     for (uint8_t i = 0; i < 2; i++) {
@@ -69,11 +71,10 @@ void loop() {
         lastControlTickMillis = now;
 
         float currentDeg[NUM_JOINTS];
-        for (uint8_t i = 0; i < 4; i++) {
-            currentDeg[i] = encoders[i].readDeg();
+        for (uint8_t i = 0; i < NUM_ENCODERS; i++) {
+            currentDeg[i] = encoders[i].readDeg(); // covers JOINT_BASE..JOINT_WRIST_ROLL
         }
-        currentDeg[JOINT_WRIST_ROLL] = servoJoints[0].currentDeg();
-        currentDeg[JOINT_GRIPPER] = servoJoints[1].currentDeg();
+        currentDeg[JOINT_GRIPPER] = servoJoints[1].currentDeg(); // no encoder — last commanded
 
         protocol.writeStatus(currentDeg, now, watchdogTripped);
     }
