@@ -31,3 +31,35 @@ Pins the project's own Python + dependencies, isolated from the system.
 it visibly matches the six-layer architecture in the tree. Fixed by moving the
 package up and setting `module-root = ""` under `[tool.uv.build-backend]` in
 pyproject.toml so uv's build backend looks at the repo root instead of src/.
+
+## PlatformIO installed as a uv tool, not via pip/apt
+No system pip was available and apt needs sudo (unusable in this shell). `uv tool
+install platformio` works standalone, but PlatformIO internally shells out to pip
+to fetch esptool — had to `ensurepip` inside PlatformIO's own uv-managed venv once
+to unblock that. One-time fix; `pio` works normally after.
+
+## Firmware: open-loop steppers, not encoder feedback
+The firmware README originally said "closed-loop control, encoder reading" before
+the real hardware was confirmed. Actual joints (J0-J3) are NEMA-17/23 steppers with
+no encoders — position is tracked by counting commanded microsteps in firmware
+(AccelStepper), trusting no missed steps. Revisit only if we add encoders later
+for drift correction.
+
+## AccelStepper + ESP32Servo libraries for firmware
+Rather than hand-rolling step-pulse timing and PWM generation: AccelStepper handles
+non-blocking multi-stepper motion (acceleration, step timing) and is called every
+loop() iteration independent of the 50 Hz command rate; ESP32Servo handles hobby
+servo PWM via the ESP32's LEDC peripheral. Both are the standard/idiomatic choice
+for this combination on ESP32.
+
+## Shoulder joint (J1): two motors, one STEP/DIR signal
+J1 has two physical NEMA-23 motors sharing the load. Firmware treats it as one
+logical joint — both driver boards are wired in parallel to the same STEP/DIR
+GPIO pair, so they move identically without needing separate firmware logic.
+
+## Serial protocol: simple ASCII CSV, not binary
+`P,<j0>..<j5>\n` in / `S,<j0>..<j5>,<millis>,<watchdog>\n` out, degrees as the
+unit. Chosen for human-debuggability (readable directly in a serial monitor)
+during bring-up; the Python driver layer is the only other consumer, so revisit
+only if the 50 Hz rate turns out to strain parsing overhead (unlikely at this
+message size).
