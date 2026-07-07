@@ -38,12 +38,23 @@ install platformio` works standalone, but PlatformIO internally shells out to pi
 to fetch esptool — had to `ensurepip` inside PlatformIO's own uv-managed venv once
 to unblock that. One-time fix; `pio` works normally after.
 
-## Firmware: open-loop steppers, not encoder feedback
-The firmware README originally said "closed-loop control, encoder reading" before
-the real hardware was confirmed. Actual joints (J0-J3) are NEMA-17/23 steppers with
-no encoders — position is tracked by counting commanded microsteps in firmware
-(AccelStepper), trusting no missed steps. Revisit only if we add encoders later
-for drift correction.
+## Position feedback: AS5600 magnetic encoders, not step counting
+Corrected an earlier wrong assumption that the steppers were open-loop with no
+encoders. Each stepper joint (J0-J3) actually has an AS5600 magnetic encoder on
+its output shaft, and that's the reported position — not counted microsteps.
+Motion is still commanded open-loop (step pulses); the encoder only reads back
+actual position, it doesn't (yet) feed back into a PID correction loop. Revisit
+if slipped-step detection/correction becomes necessary.
+
+## AS5600 encoders share one I2C bus via a TCA9548A mux
+The AS5600 has a fixed I2C address (0x36), so 4 of them can't sit on one bus
+directly. Options considered: a mux chip (TCA9548A), bit-banged extra I2C buses
+per encoder, or swapping to the address-programmable AS5600L. Went with the mux
+— cheap, standard for this exact "N identical fixed-address I2C sensors" problem,
+uses only 2 ESP32 GPIOs regardless of encoder count, and doesn't require buying
+different encoder chips than what's already on hand. One encoder per joint
+(mounted on the joint's output shaft), not one per motor — matters for J1
+(shoulder), which has 2 physical motors but one shared output shaft/encoder.
 
 ## AccelStepper + ESP32Servo libraries for firmware
 Rather than hand-rolling step-pulse timing and PWM generation: AccelStepper handles

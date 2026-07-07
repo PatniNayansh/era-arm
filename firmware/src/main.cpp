@@ -1,11 +1,14 @@
 #include <Arduino.h>
+#include <Wire.h>
 
+#include "as5600_encoder.h"
 #include "config.h"
 #include "serial_protocol.h"
 #include "servo_joint.h"
 #include "stepper_joint.h"
 
-StepperJoint stepperJoints[4]; // JOINT_BASE..JOINT_WRIST_PITCH
+StepperJoint stepperJoints[4]; // JOINT_BASE..JOINT_WRIST_PITCH — open-loop actuation
+As5600Encoder encoders[4];     // JOINT_BASE..JOINT_WRIST_PITCH — actual position feedback
 ServoJoint servoJoints[2];     // JOINT_WRIST_ROLL, JOINT_GRIPPER
 SerialProtocol protocol;
 
@@ -21,8 +24,11 @@ void setup() {
     pinMode(STEPPER_ENABLE_PIN, OUTPUT);
     setEnabled(true);
 
+    Wire.begin(I2C_SDA_PIN, I2C_SCL_PIN);
+
     for (uint8_t i = 0; i < 4; i++) {
         stepperJoints[i].begin(STEPPER_JOINTS[i]);
+        encoders[i].begin(JOINT_ENCODERS[i].muxChannel, JOINT_ENCODERS[i].zeroOffsetDeg);
     }
     for (uint8_t i = 0; i < 2; i++) {
         servoJoints[i].begin(SERVO_JOINTS[i]);
@@ -64,7 +70,7 @@ void loop() {
 
         float currentDeg[NUM_JOINTS];
         for (uint8_t i = 0; i < 4; i++) {
-            currentDeg[i] = stepperJoints[i].currentDeg();
+            currentDeg[i] = encoders[i].readDeg();
         }
         currentDeg[JOINT_WRIST_ROLL] = servoJoints[0].currentDeg();
         currentDeg[JOINT_GRIPPER] = servoJoints[1].currentDeg();

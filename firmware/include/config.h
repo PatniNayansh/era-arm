@@ -35,9 +35,10 @@ struct StepperJointConfig {
 };
 
 // STEP/DIR pins below are placeholders pending final wiring — safe generic
-// ESP32-S3-DevKitC-1 GPIOs, avoiding strapping pins (0, 3, 45, 46) and the
-// octal PSRAM/flash range (26-32) some S3 boards reserve. Revisit once the
-// driver boards are wired and update docs/decisions.md if they change.
+// ESP32-S3-DevKitC-1 GPIOs, avoiding strapping pins (0, 3, 45, 46), the
+// octal PSRAM/flash range (26-32) some S3 boards reserve, and the I2C pins
+// used for the encoder bus below. Revisit once the driver boards are wired
+// and update docs/decisions.md if they change.
 constexpr uint8_t STEPPER_ENABLE_PIN = 8; // shared across all 4 driver boards; active LOW
 
 constexpr StepperJointConfig STEPPER_JOINTS[4] = {
@@ -45,6 +46,28 @@ constexpr StepperJointConfig STEPPER_JOINTS[4] = {
     /* JOINT_SHOULDER    */ {5,  16, 33.33f,  40.0f, 60.0f},
     /* JOINT_ELBOW       */ {6,  17, 5.0f,    90.0f, 120.0f},
     /* JOINT_WRIST_PITCH */ {7,  18, 27.0f,   60.0f, 90.0f},
+};
+
+// Position feedback: one AS5600 magnetic encoder per stepper joint, mounted
+// on the joint's output shaft (post-gearbox) — so encoder degrees are
+// output-shaft degrees directly, no gear ratio math needed. The AS5600 has a
+// fixed I2C address (0x36), so all 4 share one bus through a TCA9548A
+// multiplexer, one mux channel per joint.
+constexpr uint8_t I2C_SDA_PIN = 11;
+constexpr uint8_t I2C_SCL_PIN = 12;
+constexpr uint8_t TCA9548A_ADDR = 0x70;
+constexpr uint8_t AS5600_ADDR = 0x36;
+
+struct EncoderConfig {
+    uint8_t muxChannel;
+    float zeroOffsetDeg; // raw AS5600 reading at the joint's defined zero position — calibrate later
+};
+
+constexpr EncoderConfig JOINT_ENCODERS[4] = {
+    /* JOINT_BASE        */ {0, 0.0f},
+    /* JOINT_SHOULDER    */ {1, 0.0f},
+    /* JOINT_ELBOW       */ {2, 0.0f},
+    /* JOINT_WRIST_PITCH */ {3, 0.0f},
 };
 
 struct ServoJointConfig {

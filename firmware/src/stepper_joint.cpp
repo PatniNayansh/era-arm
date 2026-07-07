@@ -13,10 +13,6 @@ void StepperJoint::setTargetDeg(float deg) {
     stepper_.moveTo(static_cast<long>(deg * stepsPerOutputDeg_));
 }
 
-float StepperJoint::currentDeg() {
-    return static_cast<float>(stepper_.currentPosition()) / stepsPerOutputDeg_;
-}
-
 void StepperJoint::run() {
     stepper_.run();
 }

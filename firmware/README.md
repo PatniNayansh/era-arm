@@ -14,20 +14,28 @@ joints and talks to the Python driver layer (`era_arm/driver`) over USB serial.
 | J4 wrist roll | 1x hobby servo (35 kg*cm) | direct |
 | J5 gripper | 1x hobby servo (MG996R-class) | direct |
 
-Steppers are open-loop (no encoders) — position is tracked by counting
-commanded microsteps, assuming no missed steps. Servos report their last
-*commanded* angle, not a measured one, since hobby servos expose no feedback
-pin.
+Steppers J0-J3 each have an **AS5600 magnetic encoder** mounted on the joint's
+output shaft (post-gearbox) — this is the actual position source reported over
+serial, not step counting. Steppers are still *commanded* open-loop (step
+pulses via AccelStepper); the encoder only reads back where the joint really
+is. The AS5600 has a fixed I2C address (0x36), so all 4 encoders share one I2C
+bus through a TCA9548A multiplexer, one mux channel per joint. Servos report
+their last *commanded* angle, not a measured one, since hobby servos expose no
+feedback pin.
 
 ## Structure
 
-- `include/config.h` — pin assignments, gear ratios, timing constants. **Pin
-  numbers are placeholders** pending final wiring — update here once the
-  driver boards are wired, and note any change in `docs/decisions.md`.
+- `include/config.h` — pin assignments, gear ratios, encoder mux channels,
+  timing constants. **Pin numbers and encoder zero-offsets are placeholders**
+  pending final wiring/calibration — update here once the driver boards and
+  encoders are wired, and note any change in `docs/decisions.md`.
 - `include/stepper_joint.h` / `src/stepper_joint.cpp` — wraps one
   [AccelStepper](https://github.com/waspinator/AccelStepper) instance,
-  converting output-shaft degrees to motor microsteps via the joint's gear
-  ratio.
+  converting target output-shaft degrees to motor microsteps via the joint's
+  gear ratio. Drives motion only — does not report position.
+- `include/as5600_encoder.h` / `src/as5600_encoder.cpp` — reads one AS5600
+  encoder through its TCA9548A mux channel; this is the reported position for
+  each stepper joint.
 - `include/servo_joint.h` / `src/servo_joint.cpp` — wraps one
   [ESP32Servo](https://github.com/madhephaestus/ESP32Servo) instance.
 - `include/serial_protocol.h` / `src/serial_protocol.cpp` — parses incoming
@@ -58,5 +66,5 @@ pio device monitor            # watch status lines at 115200 baud
 ```
 
 Status: initial scaffold written and compiling for `esp32-s3-devkitc-1`.
-Not yet flashed or tested on real hardware — pins and gear ratios need
-verification once the arm is physically wired.
+Not yet flashed or tested on real hardware — pins, gear ratios, and encoder
+zero-offsets need verification/calibration once the arm is physically wired.
