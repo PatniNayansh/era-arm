@@ -80,3 +80,18 @@ unit. Chosen for human-debuggability (readable directly in a serial monitor)
 during bring-up; the Python driver layer is the only other consumer, so revisit
 only if the 50 Hz rate turns out to strain parsing overhead (unlikely at this
 message size).
+
+## Layer 2 driver: plain USB webcam via OpenCV (unconfirmed assumption)
+No camera hardware was specified yet, so `era_arm/driver/camera.py` defaults to
+a generic UVC webcam via `cv2.VideoCapture` — the cheapest, most common choice.
+**Revisit this if the arm actually uses a depth camera (e.g. Intel RealSense)**
+— that needs a different SDK (`pyrealsense2`), not OpenCV. Nothing above the
+driver layer depends on OpenCV specifically, so swapping is a small, contained
+change if this guess is wrong.
+
+## Layer 2 driver: protocol logic split into its own module
+`era_arm/driver/protocol.py` (encode_command/parse_status) is separate from
+`serial_arm.py` (the actual pyserial I/O) specifically so the wire-format logic
+can be unit-tested (tests/test_protocol.py) without needing a real serial port
+or connected hardware — mirrors the firmware's own split between
+serial_protocol.cpp and main.cpp.
