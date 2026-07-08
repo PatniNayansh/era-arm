@@ -31,3 +31,52 @@ Pins the project's own Python + dependencies, isolated from the system.
 it visibly matches the six-layer architecture in the tree. Fixed by moving the
 package up and setting `module-root = ""` under `[tool.uv.build-backend]` in
 pyproject.toml so uv's build backend looks at the repo root instead of src/.
+
+## PlatformIO installed as a uv tool, not via pip/apt
+No system pip was available and apt needs sudo (unusable in this shell). `uv tool
+install platformio` works standalone, but PlatformIO internally shells out to pip
+to fetch esptool — had to `ensurepip` inside PlatformIO's own uv-managed venv once
+to unblock that. One-time fix; `pio` works normally after.
+
+## Position feedback: AS5600 magnetic encoders, not step counting
+Corrected an earlier wrong assumption that the steppers were open-loop with no
+encoders. Every joint except the gripper (J0-J4: the 4 steppers plus the
+wrist-roll servo) actually has an AS5600 magnetic encoder on its output shaft,
+and that's the reported position — not counted microsteps, and not the servo's
+last-commanded angle. Motion is still commanded open-loop (step pulses for
+steppers, PWM for the wrist-roll servo); encoders only read back actual
+position, they don't (yet) feed back into a PID correction loop. Revisit if
+slipped-step detection/correction becomes necessary. Initially assumed only
+4 encoders (one per stepper); corrected again to 5 once the wrist-roll servo's
+encoder was confirmed too — the servo's own internal potentiometer isn't
+exposed over its control wire, so the external AS5600 is the only way to get
+real position feedback on that joint.
+
+## AS5600 encoders share one I2C bus via a TCA9548A mux
+The AS5600 has a fixed I2C address (0x36), so 5 of them can't sit on one bus
+directly. Options considered: a mux chip (TCA9548A), bit-banged extra I2C buses
+per encoder, or swapping to the address-programmable AS5600L. Went with the mux
+— cheap, standard for this exact "N identical fixed-address I2C sensors" problem,
+uses only 2 ESP32 GPIOs regardless of encoder count, and doesn't require buying
+different encoder chips than what's already on hand. One encoder per joint
+(mounted on the joint's output shaft), not one per motor — matters for J1
+(shoulder), which has 2 physical motors but one shared output shaft/encoder.
+
+## AccelStepper + ESP32Servo libraries for firmware
+Rather than hand-rolling step-pulse timing and PWM generation: AccelStepper handles
+non-blocking multi-stepper motion (acceleration, step timing) and is called every
+loop() iteration independent of the 50 Hz command rate; ESP32Servo handles hobby
+servo PWM via the ESP32's LEDC peripheral. Both are the standard/idiomatic choice
+for this combination on ESP32.
+
+## Shoulder joint (J1): two motors, one STEP/DIR signal
+J1 has two physical NEMA-23 motors sharing the load. Firmware treats it as one
+logical joint — both driver boards are wired in parallel to the same STEP/DIR
+GPIO pair, so they move identically without needing separate firmware logic.
+
+## Serial protocol: simple ASCII CSV, not binary
+`P,<j0>..<j5>\n` in / `S,<j0>..<j5>,<millis>,<watchdog>\n` out, degrees as the
+unit. Chosen for human-debuggability (readable directly in a serial monitor)
+during bring-up; the Python driver layer is the only other consumer, so revisit
+only if the 50 Hz rate turns out to strain parsing overhead (unlikely at this
+message size).
