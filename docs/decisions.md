@@ -80,3 +80,46 @@ unit. Chosen for human-debuggability (readable directly in a serial monitor)
 during bring-up; the Python driver layer is the only other consumer, so revisit
 only if the 50 Hz rate turns out to strain parsing overhead (unlikely at this
 message size).
+
+## Layer 2 driver: split protocol (pure) from transport (ArmDriver)
+`era_arm/driver/protocol.py` holds the wire rules as pure functions
+(`format_command`/`parse_status`) with no I/O, so they're unit-testable without
+hardware; `arm.py`'s `ArmDriver` does the actual serial I/O and takes its
+connection as a constructor argument (dependency injection). That lets the same
+driver run against a real `serial.Serial` or the `FakeArm` mock unchanged — the
+whole layer is built and tested (21 pytest tests) before any hardware exists.
+
+## read_state() drains to the freshest line, not one-per-command
+The firmware streams a status line every ~50 Hz tick regardless of commands, so
+a naive one-readline-per-read returns stale buffered data. `read_state()` drains
+everything currently buffered (`in_waiting`) and returns the last valid line,
+skipping partial/garbled ones. Revisit if we later want the full history rather
+than just latest.
+
+## Software joint limits live in the driver (JOINT_LIMITS_DEG), currently placeholders
+`format_command` validates targets against per-joint limits and raises (or clamps,
+if `ArmDriver(clamp=True)`) before anything reaches a motor. Values in
+`protocol.py` are placeholders — calibrate on the real arm and update here.
+
+## Mock-first: every software layer is built and tested against fakes before hardware
+No arm, cameras, or GPU exist in the current WSL setup, so each layer ships a
+mock (`FakeArm`, `MockCamera`, `ScriptedTeleop`, `MockPolicy`) and a pytest suite
+that runs with zero hardware. Real I/O is dependency-injected and swapped in later
+(`ArmDriver.open`, `OpenCVCamera`, `KeyboardTeleop`, `load_lerobot_policy`). This
+keeps the whole stack developable now and CI-testable on GitHub Actions.
+
+## Heavy/hardware deps are optional extras, not core dependencies
+Core install is just numpy + pyserial (fast, mock-testable). OpenCV, pynput, and
+LeRobot/torch are `[project.optional-dependencies]` (`camera`, `teleop`, `train`),
+installed per machine with `uv sync --extra <name>`. Their imports are lazy/guarded
+so the package imports and tests pass without them.
+
+## Training is a subprocess wrapper around lerobot-train, not a Python-API coupling
+`era_arm/train/train.py` builds the exact `lerobot-train` command and shells out,
+rather than importing lerobot's fast-moving training API. `build_train_command()`
+stays pure and unit-tested; only actually running it needs the `train` extra + CUDA.
+
+## Recorded episodes use a lightweight .npz format, converted to LeRobotDataset later
+`save_episode` writes numpy `.npz` + JSON so recording works with no heavy deps.
+The episode→LeRobotDataset conversion (video encoding + HF dataset) is a documented
+seam wired up once lerobot is installed. Revisit if we need streaming/large episodes.

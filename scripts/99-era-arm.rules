@@ -1,0 +1,12 @@
+# udev rule: give the arm's ESP32 a stable device name at /dev/era-arm,
+# so the driver doesn't depend on enumeration order (/dev/ttyUSB0 vs ttyUSB1).
+#
+# 1. Find your board's idVendor/idProduct:
+#        udevadm info -a -n /dev/ttyUSB0 | grep -E 'idVendor|idProduct' | head
+#    (common ESP32-S3 USB-serial: CP210x = 10c4:ea60, CH340 = 1a86:7523)
+# 2. Replace the ids below to match, then install:
+#        sudo cp scripts/99-era-arm.rules /etc/udev/rules.d/
+#        sudo udevadm control --reload-rules && sudo udevadm trigger
+# 3. Use ArmDriver.open("/dev/era-arm") in code.
+
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", SYMLINK+="era-arm", MODE="0666"
