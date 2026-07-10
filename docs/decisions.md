@@ -121,5 +121,29 @@ stays pure and unit-tested; only actually running it needs the `train` extra + C
 
 ## Recorded episodes use a lightweight .npz format, converted to LeRobotDataset later
 `save_episode` writes numpy `.npz` + JSON so recording works with no heavy deps.
-The episode→LeRobotDataset conversion (video encoding + HF dataset) is a documented
-seam wired up once lerobot is installed. Revisit if we need streaming/large episodes.
+Arrays use LeRobot's dataset feature names (`observation.state`,
+`observation.images.<cam>`, `action`) so they line up with the real pipeline. For
+real training data, `lerobot-record` builds the video-encoded LeRobotDataset
+directly; the `.npz` recorder is for offline/CI use. Revisit for large/streaming data.
+
+## Conform to LeRobot's Robot interface (verified from source), not invented naming
+Initial L3-L6 used ad-hoc keys (`joints` array, `image.top`) and a guessed policy
+loader — a code review flagged they wouldn't match LeRobot. Re-verified the real API
+from LeRobot source + the "Bring Your Own Hardware" guide and adopted it: flat dicts
+keyed `"<joint>.pos"` for state/action, camera-name keys for frames, lifecycle
+`connect(calibrate=True)/disconnect/configure/calibrate`, `observation_features`/
+`action_features`. This makes the arm a drop-in for LeRobot's data/train/eval tools.
+
+## Two robot classes: light duck-typed core + registered LeRobot subclass
+`EraArmRobot` (robot.py) matches LeRobot's interface but imports no lerobot, so it
+stays mock-testable in CI. `LeRobotEraArm` (lerobot_robot.py) is the real
+`lerobot.robots.Robot` subclass, registered via `RobotConfig.register_subclass("era_arm")`
+so `lerobot-record`/`lerobot-teleoperate`/`lerobot-eval` discover it. Both share one
+mapping in robot.py — single source of truth, guarded lerobot import.
+
+## Delegate real training/inference to LeRobot CLIs; don't hand-roll the pipeline
+Loading uses LeRobot's real `from_pretrained` (via `get_policy_class(cfg.type)`), and
+closed-loop inference on hardware goes through `lerobot-record --policy.path` /
+`lerobot-eval`, which run the maintained preprocessor→policy→postprocessor pipeline.
+`build_train_command`/`build_eval_command` are pure, unit-tested wrappers. Our
+`rollout`/`MockPolicy` remain for testing the loop mechanics without a model.

@@ -4,23 +4,23 @@ import numpy as np
 
 from era_arm.driver.arm import ArmDriver
 from era_arm.driver.mock import FakeArm
-from era_arm.robot import EraArmRobot, MockCamera
+from era_arm.robot import MOTOR_KEYS, EraArmRobot, MockCamera, action_from_targets
 from era_arm.teleop import ScriptedTeleop, record_episode, save_episode
 
 
-def test_scripted_teleop_sequence_then_holds():
+def test_scripted_teleop_returns_flat_action_dicts():
     teleop = ScriptedTeleop([[1, 1, 1, 1, 1, 1], [2, 2, 2, 2, 2, 2]])
     teleop.start()
-    assert teleop.get_action() == [1, 1, 1, 1, 1, 1]
-    assert teleop.get_action() == [2, 2, 2, 2, 2, 2]
-    assert teleop.get_action() == [2, 2, 2, 2, 2, 2]  # holds last
+    assert teleop.get_action() == action_from_targets([1, 1, 1, 1, 1, 1])
+    assert teleop.get_action() == action_from_targets([2, 2, 2, 2, 2, 2])
+    assert teleop.get_action() == action_from_targets([2, 2, 2, 2, 2, 2])  # holds last
 
 
 def test_scripted_teleop_loops():
     teleop = ScriptedTeleop([[1, 1, 1, 1, 1, 1], [2, 2, 2, 2, 2, 2]], loop=True)
     teleop.start()
     seen = [teleop.get_action() for _ in range(4)]
-    assert seen[2] == [1, 1, 1, 1, 1, 1]  # wrapped around
+    assert seen[2] == action_from_targets([1, 1, 1, 1, 1, 1])  # wrapped around
 
 
 def test_record_episode_length_and_alignment():
@@ -33,12 +33,13 @@ def test_record_episode_length_and_alignment():
 
     assert len(ep) == 5
     assert len(ep.observations) == 5
-    assert ep.actions[0].tolist() == [0, 0, 0, 0, 90, 0]
-    assert ep.actions[1].tolist() == [10, 20, 0, 0, 90, 45]
-    assert "image.top" in ep.observations[0]
+    assert ep.actions[0] == action_from_targets([0, 0, 0, 0, 90, 0])
+    assert ep.actions[1] == action_from_targets([10, 20, 0, 0, 90, 45])
+    assert "top" in ep.observations[0]
+    assert "base.pos" in ep.observations[0]
 
 
-def test_save_episode_writes_npz_and_json(tmp_path):
+def test_save_episode_uses_lerobot_feature_names(tmp_path):
     robot = EraArmRobot(ArmDriver(FakeArm()), cameras={"top": MockCamera(width=8, height=8)})
     robot.connect()
     teleop = ScriptedTeleop([[0, 0, 0, 0, 90, 0]], loop=True)
@@ -49,6 +50,6 @@ def test_save_episode_writes_npz_and_json(tmp_path):
     assert npz_path.exists()
     assert (tmp_path / "episode_000.json").exists()
     data = np.load(npz_path)
-    assert data["actions"].shape == (3, 6)
-    assert data["joints"].shape == (3, 6)
-    assert data["image.top"].shape == (3, 8, 8, 3)
+    assert data["action"].shape == (3, len(MOTOR_KEYS))
+    assert data["observation.state"].shape == (3, len(MOTOR_KEYS))
+    assert data["observation.images.top"].shape == (3, 8, 8, 3)

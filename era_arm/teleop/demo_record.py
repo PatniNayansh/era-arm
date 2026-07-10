@@ -26,8 +26,8 @@ def main():
     episode = record_episode(robot, teleop, fps=30, max_steps=10, real_time=False)
 
     print(f"recorded {len(episode)} steps at {episode.fps} fps")
-    print("first action: ", episode.actions[0].tolist())
-    print("last action:  ", episode.actions[-1].tolist())
+    print("first action: ", episode.actions[0])
+    print("last action:  ", episode.actions[-1])
     print("obs keys:     ", sorted(episode.observations[0]))
     robot.disconnect()
 

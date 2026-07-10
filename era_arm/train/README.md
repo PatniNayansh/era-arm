@@ -37,6 +37,10 @@ Any extra flags after the known ones are passed straight through to `lerobot-tra
 
 ## Pipeline
 
-record (L4) → convert episodes to a LeRobotDataset → **train (here)** → eval (L6).
-The episode→LeRobotDataset conversion is the seam noted in
-`era_arm/teleop/record.py`; wire it up once `lerobot` is installed.
+`lerobot-record` (drives `LeRobotEraArm`, builds a LeRobotDataset) → **train (here)**
+→ `era_arm.eval.evaluate` (`lerobot-record --policy.path`, runs the policy on the arm).
+
+The dataset is produced directly by `lerobot-record` — no manual conversion needed.
+Our lightweight `.npz` recorder (`era_arm/teleop/record.py`) is for offline/CI use and
+already writes LeRobot feature names (`observation.state`, `observation.images.<cam>`,
+`action`) so it lines up with this pipeline.

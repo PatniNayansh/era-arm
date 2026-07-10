@@ -46,6 +46,27 @@ uv sync --extra teleop   # pynput, for keyboard teleop
 uv sync --extra train    # LeRobot + torch, on the CUDA GPU box
 ```
 
+## Real ML workflow (LeRobot)
+
+The stack conforms to LeRobot's `Robot` interface: `EraArmRobot` uses flat
+`{"<joint>.pos": ...}` observation/action dicts, and `LeRobotEraArm`
+(`era_arm/robot/lerobot_robot.py`) is a registered `Robot` subclass, so LeRobot's
+CLIs drive the physical arm end-to-end:
+
+```bash
+uv sync --extra train                                            # LeRobot + torch (GPU box)
+
+lerobot-teleoperate --robot.type=era_arm --robot.port=/dev/era-arm ...      # drive it
+lerobot-record      --robot.type=era_arm --robot.port=/dev/era-arm \        # collect demos
+                    --dataset.repo_id=you/era-arm-pick --dataset.num_episodes=30
+uv run python -m era_arm.train.train --dataset you/era-arm-pick --policy act # train ACT
+uv run python -m era_arm.eval.evaluate --checkpoint outputs/.../last \       # run on arm
+                    --port /dev/era-arm --dataset you/era-arm-eval
+```
+
+The Python layers (`teleop`/`train`/`eval`) wrap these commands and add mock-testable
+loops for offline development. See each layer's README for details.
+
 ## Going to real hardware
 
 The software is built and tested against mocks. To run on the physical arm:

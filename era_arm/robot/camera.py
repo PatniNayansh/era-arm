@@ -36,6 +36,10 @@ class MockCamera:
         self._frame += 1
         return np.full((self.height, self.width, 3), value, dtype=np.uint8)
 
+    # LeRobot's Robot loop calls cameras via async_read(); alias to read() here.
+    def async_read(self) -> np.ndarray:
+        return self.read()
+
     def disconnect(self) -> None:
         self._connected = False
 
@@ -78,6 +82,9 @@ class OpenCVCamera:
             raise RuntimeError(f"failed to read frame from camera {self.index}")
         # OpenCV returns BGR; the rest of the stack expects RGB.
         return cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    def async_read(self) -> np.ndarray:
+        return self.read()
 
     def disconnect(self) -> None:
         if self._cap is not None:

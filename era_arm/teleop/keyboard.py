@@ -12,6 +12,7 @@ Space re-centers all joints to the midpoint of their limits.
 from __future__ import annotations
 
 from era_arm.driver.protocol import JOINT_LIMITS_DEG, NUM_JOINTS
+from era_arm.robot import action_from_targets
 from era_arm.teleop.base import Teleoperator
 
 _UP_KEYS = "qwerty"     # J0..J5 increase
@@ -57,7 +58,7 @@ class KeyboardTeleop(Teleoperator):
                 self._targets[j] -= self.step_deg
             lo, hi = JOINT_LIMITS_DEG[j]
             self._targets[j] = min(hi, max(lo, self._targets[j]))
-        return list(self._targets)
+        return action_from_targets(self._targets)
 
     def stop(self) -> None:
         if self._listener is not None:

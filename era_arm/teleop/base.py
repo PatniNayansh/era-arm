@@ -14,8 +14,8 @@ class Teleoperator:
     def start(self) -> None:
         """Begin producing actions (open devices, reset state). Optional."""
 
-    def get_action(self):
-        """Return the next action — a list/array of 6 target joint angles."""
+    def get_action(self) -> dict:
+        """Return the next action as a flat LeRobot dict: {"<joint>.pos": angle, ...}."""
         raise NotImplementedError
 
     def stop(self) -> None:

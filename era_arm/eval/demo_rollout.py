@@ -8,7 +8,7 @@ from era_arm.driver.arm import ArmDriver
 from era_arm.driver.mock import FakeArm
 from era_arm.eval.policy import MockPolicy
 from era_arm.eval.rollout import rollout
-from era_arm.robot import EraArmRobot, MockCamera
+from era_arm.robot import MOTOR_KEYS, EraArmRobot, MockCamera
 
 
 def main():
@@ -19,8 +19,8 @@ def main():
     traj = rollout(robot, policy, steps=8, fps=30, real_time=False)
 
     print(f"ran {len(traj)} steps at {traj.fps} fps")
-    print("commanded action:", traj.actions[0].tolist())
-    print("arm ended at:     ", traj.observations[-1]["joints"].tolist())
+    print("commanded action:", traj.actions[0])
+    print("arm ended at:     ", {k: traj.observations[-1][k] for k in MOTOR_KEYS})
     robot.disconnect()
 
 

@@ -1,8 +1,12 @@
 """Layer 6 — running a policy on the robot (a 'rollout').
 
 The closed loop that evaluation and deployment share: read an observation, ask the
-policy for an action, send it to the arm, repeat at a fixed rate. Returns the
-recorded trajectory so callers can score success or inspect behaviour.
+policy for an action, send it, repeat at a fixed rate. Returns the recorded
+trajectory (flat LeRobot observation/action dicts) so callers can score success.
+
+For running a *trained* policy on real hardware, prefer LeRobot's own pipeline via
+`era_arm.eval.evaluate.build_eval_command` (the `lerobot-record --policy.path` path).
+This loop is ideal for MockPolicy and for programmatic control.
 """
 
 from __future__ import annotations
@@ -10,13 +14,11 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, field
 
-import numpy as np
-
 
 @dataclass
 class Rollout:
-    observations: list = field(default_factory=list)
-    actions: list = field(default_factory=list)
+    observations: list = field(default_factory=list)  # list[dict]
+    actions: list = field(default_factory=list)        # list[dict]
     fps: int = 30
 
     def __len__(self) -> int:
@@ -39,7 +41,7 @@ def rollout(robot, policy, steps: int, fps: int = 30, real_time: bool = True) ->
             action = policy.select_action(obs)
             robot.send_action(action)
             traj.observations.append(obs)
-            traj.actions.append(np.asarray(action, dtype=np.float32))
+            traj.actions.append(dict(action))
             if real_time:
                 remaining = period - (time.perf_counter() - t0)
                 if remaining > 0:

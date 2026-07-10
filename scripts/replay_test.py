@@ -23,9 +23,12 @@ from era_arm.driver.mock import FakeArm
 
 
 def load_actions(npz_path) -> np.ndarray:
-    """Return the (T, 6) action array from a saved episode .npz."""
+    """Return the (T, 6) action array from a saved episode .npz.
+
+    Episodes saved by era_arm.teleop.record use LeRobot's feature name `action`.
+    """
     with np.load(npz_path) as data:
-        return np.asarray(data["actions"], dtype=np.float32)
+        return np.asarray(data["action"], dtype=np.float32)
 
 
 def replay_actions(driver: ArmDriver, actions, fps: int = 30, real_time: bool = True) -> int:
